@@ -8,7 +8,9 @@ const fs = require('fs');
 dotenv.config();
 
 const app = express();
-const upload = multer({ dest: 'uploads/' });
+// const upload = multer({ dest: 'uploads/' });
+const upload = multer({ storage: multer.memoryStorage() });
+
 
 app.use(cors());
 app.use(express.json());
@@ -17,12 +19,13 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 let transcripts = [];
 
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+
 app.post('/upload', upload.array('transcripts'), async (req, res) => {
   const files = req.files;
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
   for (const file of files) {
-    const content = fs.readFileSync(file.path, 'utf8');
+    const content = file.buffer.toString('utf8');
     const summary = await getSummary(model, content);
     const findings = await getFindings(model, content);
     transcripts.push({
@@ -36,9 +39,10 @@ app.post('/upload', upload.array('transcripts'), async (req, res) => {
   res.json({ message: 'Transcripts processed successfully', transcripts });
 });
 
+
 app.post('/ask', async (req, res) => {
   const { question } = req.body;
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+  // const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
   try {
     const result = await model.generateContent([
